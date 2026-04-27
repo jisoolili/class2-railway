@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>家护家电 | 智能客服助手</title>
-    <!-- 阻止 favicon 请求报错 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💜</text></svg>">
     <style>
         * {
@@ -34,7 +33,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            backdrop-filter: blur(2px);
         }
 
         /* 紫色渐变头部 */
@@ -44,6 +42,7 @@
             padding: 20px 24px;
             text-align: center;
             position: relative;
+            flex-shrink: 0;
         }
 
         .chat-header h1 {
@@ -72,7 +71,6 @@
             opacity: 0.9;
         }
 
-        /* 紫色装饰条 */
         .chat-header::after {
             content: "";
             position: absolute;
@@ -84,7 +82,7 @@
             border-radius: 3px;
         }
 
-        /* iframe 容器 - 自适应高度 */
+        /* iframe 容器 - 占据剩余全部空间 */
         .iframe-wrapper {
             flex: 1;
             position: relative;
@@ -97,60 +95,6 @@
             height: 100%;
             border: none;
             display: block;
-        }
-
-        /* 输入区域 - 紫色风格 */
-        .chat-input-container {
-            padding: 16px 20px;
-            background: #ffffff;
-            border-top: 1px solid #e9d5ff;
-            display: flex;
-            gap: 12px;
-            box-shadow: 0 -2px 10px rgba(106, 63, 175, 0.08);
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 12px 18px;
-            border: 2px solid #e9d5ff;
-            border-radius: 30px;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.3s;
-            background: #fefbff;
-        }
-
-        .chat-input:focus {
-            border-color: #9b59b6;
-            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.2);
-        }
-
-        .send-button {
-            padding: 12px 28px;
-            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            font-size: 15px;
-            font-weight: 500;
-            transition: all 0.3s;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
-        }
-
-        .send-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
-        }
-
-        .send-button:active {
-            transform: translateY(0);
-        }
-
-        .send-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
         }
 
         /* 滚动条美化 */
@@ -188,17 +132,9 @@
             .chat-header h1::after {
                 font-size: 22px;
             }
-
-            .send-button {
-                padding: 12px 20px;
-            }
-
-            .chat-input-container {
-                padding: 12px 16px;
-            }
         }
 
-        /* 加载提示（可选） */
+        /* 加载提示 */
         .iframe-loading {
             position: absolute;
             top: 50%;
@@ -212,6 +148,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             pointer-events: none;
             z-index: 10;
+            transition: opacity 0.3s;
         }
     </style>
 </head>
@@ -222,7 +159,7 @@
             <p>基于产品知识库 · 7×24小时为您服务 💜</p>
         </div>
 
-        <!-- iframe 容器 -->
+        <!-- iframe 容器 - FastGPT 完整客服界面 -->
         <div class="iframe-wrapper">
             <div class="iframe-loading" id="iframeLoading">✨ 加载智能客服中...</div>
             <iframe
@@ -234,18 +171,9 @@
                 loading="lazy">
             </iframe>
         </div>
-
-        <!-- 保留输入区域作为引导，实际交互通过 iframe 完成 -->
-        <div class="chat-input-container">
-            <input type="text" class="chat-input" id="chatInput" placeholder="例如：空气净化器A1000滤网怎么换？" onkeypress="handleKeyPress(event)">
-            <button class="send-button" id="sendButton" onclick="sendMessage()">💬 发送咨询</button>
-        </div>
     </div>
 
     <script>
-        // 获取 DOM 元素
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
         const iframe = document.getElementById('fastgptFrame');
         const loadingDiv = document.getElementById('iframeLoading');
 
@@ -268,113 +196,6 @@
                 }, 300);
             }
         }, 8000);
-
-        // 获取 iframe 内部窗口（用于消息传递）
-        function getIframeWindow() {
-            return iframe.contentWindow;
-        }
-
-        // 发送消息到 FastGPT iframe
-        async function sendMessageToFastGPT(message) {
-            const iframeWin = getIframeWindow();
-            if (!iframeWin) {
-                console.warn('iframe 未就绪');
-                return false;
-            }
-
-            try {
-                // 尝试使用 postMessage 发送消息
-                // FastGPT 可能支持此方式，如果不支持则引导用户直接在 iframe 内输入
-                iframeWin.postMessage({
-                    type: 'chat',
-                    message: message
-                }, 'https://cloud.fastgpt.cn');
-                return true;
-            } catch (e) {
-                console.warn('postMessage 失败:', e);
-                return false;
-            }
-        }
-
-        // 显示提示（因为 iframe 是独立应用，发送按钮改为引导用户）
-        function showGuideToast() {
-            // 创建临时提示
-            const toast = document.createElement('div');
-            toast.textContent = '💡 请直接在聊天窗口中输入问题，AI 客服会为您解答~';
-            toast.style.position = 'fixed';
-            toast.style.bottom = '100px';
-            toast.style.right = '20px';
-            toast.style.backgroundColor = '#6c3fd6';
-            toast.style.color = 'white';
-            toast.style.padding = '12px 20px';
-            toast.style.borderRadius = '30px';
-            toast.style.fontSize = '14px';
-            toast.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
-            toast.style.zIndex = '1000';
-            toast.style.animation = 'fadeInUp 0.3s ease';
-
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        // 发送消息
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) {
-                chatInput.placeholder = '请输入问题后再发送~';
-                chatInput.style.borderColor = '#e74c8c';
-                setTimeout(() => {
-                    chatInput.style.borderColor = '#e9d5ff';
-                    chatInput.placeholder = '例如：空气净化器A1000滤网怎么换？';
-                }, 1500);
-                return;
-            }
-
-            // 尝试发送到 iframe
-            const sent = await sendMessageToFastGPT(message);
-
-            if (sent) {
-                // 清空输入框
-                chatInput.value = '';
-                chatInput.placeholder = '继续提问...';
-            } else {
-                // 如果不支持 postMessage，显示引导
-                showGuideToast();
-            }
-        }
-
-        // 回车发送
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
-
-        // 添加动画
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-
-        // 页面加载完成后的初始化
-        window.addEventListener('load', () => {
-            chatInput.focus();
-        });
     </script>
 </body>
 </html>
